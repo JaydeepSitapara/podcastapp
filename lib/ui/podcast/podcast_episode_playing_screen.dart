@@ -156,7 +156,8 @@ class _PodcastEpisodePlayingScreenState
                   final total = provider.totalDuration.inSeconds.toDouble();
 
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 10),
                     child: Column(
                       children: [
                         SliderTheme(
@@ -246,6 +247,8 @@ class _PodcastEpisodePlayingScreenState
                 },
               ),
 
+              const SizedBox(height: 10),
+
               // Playback Controls
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -330,6 +333,7 @@ class _PodcastEpisodePlayingScreenState
                   ],
                 ),
               ),
+              const SizedBox(height: 10),
 
               // Bottom Episode Info
               Container(
