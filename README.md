@@ -1,6 +1,7 @@
 # podcastapp
 
 A new Flutter project.
+- in this app i have used simple state management(provider). 
 
 ## Getting Started
 
