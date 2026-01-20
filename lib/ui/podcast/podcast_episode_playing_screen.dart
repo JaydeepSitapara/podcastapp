@@ -16,20 +16,24 @@ class PodcastEpisodePlayingScreen extends StatefulWidget {
 
 class _PodcastEpisodePlayingScreenState
     extends State<PodcastEpisodePlayingScreen> {
-  double _currentPosition = 15.20; // Current time in minutes
-  double _totalDuration = 22.45; // Total duration in minutes
-  bool _isPlaying = true;
+  String _formatTime(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
 
-  String _formatTime(double minutes) {
-    int mins = minutes.floor();
-    int secs = ((minutes - mins) * 60).round();
-    return '$mins:${secs.toString().padLeft(2, '0')}';
+  @override
+  void initState() {
+    super.initState();
+    loadAudio();
+  }
+
+  void loadAudio() async {
+    context.read<PodcastProvider>().loadAudio(audio: widget.podcast.audioPath);
   }
 
   @override
   Widget build(BuildContext context) {
-    final podcastP = context.read<PodcastProvider>();
-
     return Scaffold(
       backgroundColor: const Color(0xFF0B1424),
       body: SafeArea(
@@ -44,7 +48,10 @@ class _PodcastEpisodePlayingScreenState
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios,
                           color: Colors.white, size: 32),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        context.read<PodcastProvider>().stop();
+                        Navigator.pop(context);
+                      },
                     ),
                     const Spacer(),
                     Container(
@@ -143,59 +150,59 @@ class _PodcastEpisodePlayingScreenState
               const SizedBox(height: 32),
 
               // Progress Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 3,
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 8,
-                        ),
-                        overlayShape: const RoundSliderOverlayShape(
-                          overlayRadius: 16,
-                        ),
-                        activeTrackColor: const Color(0xFF7E57C2),
-                        inactiveTrackColor: Colors.white24,
-                        thumbColor: Colors.white,
-                        overlayColor: const Color(0xFF7E57C2).withOpacity(0.3),
-                      ),
-                      child: Slider(
-                        value: _currentPosition,
-                        min: 0,
-                        max: _totalDuration,
-                        onChanged: (value) {
-                          setState(() {
-                            _currentPosition = value;
-                          });
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _formatTime(_currentPosition),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
+              Consumer<PodcastProvider>(
+                builder: (context, provider, _) {
+                  final current = provider.currentPosition.inSeconds.toDouble();
+                  final total = provider.totalDuration.inSeconds.toDouble();
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        SliderTheme(
+                          data: SliderThemeData(
+                            trackHeight: 3,
+                            thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 8),
+                            overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 16),
+                            activeTrackColor: const Color(0xFF7E57C2),
+                            inactiveTrackColor: Colors.white24,
+                            thumbColor: Colors.white,
+                            overlayColor:
+                                const Color(0xFF7E57C2).withOpacity(0.3),
                           ),
-                          Text(
-                            _formatTime(_totalDuration),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
+                          child: Slider(
+                            value: current.clamp(0, total),
+                            min: 0,
+                            max: total > 0 ? total : 1,
+                            onChanged: (value) {
+                              provider.seek(Duration(seconds: value.toInt()));
+                            },
                           ),
-                        ],
-                      ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatTime(provider.currentPosition),
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
+                              ),
+                              Text(
+                                _formatTime(provider.totalDuration),
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
 
               const SizedBox(height: 10),
@@ -284,16 +291,18 @@ class _PodcastEpisodePlayingScreenState
                           ),
                         ],
                       ),
-                      child: IconButton(
-                        icon: Icon(
-                          _isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                          size: 36,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPlaying = !_isPlaying;
-                          });
+                      child: Consumer<PodcastProvider>(
+                        builder: (context, p, child) {
+                          return IconButton(
+                            icon: Icon(
+                              p.isPlaying ? Icons.pause : Icons.play_arrow,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                            onPressed: () {
+                              p.togglePlayPause();
+                            },
+                          );
                         },
                       ),
                     ),
@@ -322,7 +331,7 @@ class _PodcastEpisodePlayingScreenState
                 ),
               ),
 
-// Bottom Episode Info
+              // Bottom Episode Info
               Container(
                   margin: const EdgeInsets.all(8),
                   padding: const EdgeInsets.all(4),
